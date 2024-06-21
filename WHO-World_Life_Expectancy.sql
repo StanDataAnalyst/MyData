@@ -3,17 +3,22 @@ Cleaning Data in SQL Queries
 
 Dataset Source: 
 Life Expectancy WHO - helps in predicting life expectancy with the help of various factors for a period of 15 years.
-The Global Health Observatory (GHO) data repository under World Health Organization (WHO) keeps track of the health status as well as many other related factors for all countries The data-sets are made available to public for the purpose of health data analysis. The data-set related to life expectancy, health factors for 193 countries has been collected from the same WHO data repository website and its corresponding economic data was collected from United Nation website. Although there have been lot of studies undertaken in the past on factors affecting life expectancy considering demographic variables, income composition and mortality rates. It was found that affect of immunization and human development index was not taken into account in the past. 
+The Global Health Observatory (GHO) data repository under World Health Organization (WHO) keeps track of the health status as well as many other related 
+factors for all countries The data-sets are made available to public for the purpose of health data analysis. The data-set related to life expectancy, 
+health factors for 193 countries has been collected from the same WHO data repository website and its corresponding economic data was collected from United 
+Nation website. Although there have been lot of studies undertaken in the past on factors affecting life expectancy considering demographic variables, 
+income composition and mortality rates. It was found that affect of immunization and human development index was not taken into account in the past. 
 
 About the data: 
-Each row in the data consists of information about the Country, Continent,Year, Status,Life expectancy,Adult Mortality,infant deaths,Alcohol, GDP in addition to other input parameters.
+Each row in the data consists of information about the Country, Continent,Year, Status,Life expectancy,Adult Mortality,infant deaths,Alcohol, GDP in 
+addition to other input parameters.
 */
 
 SELECT *
 FROM world_life_expectancy;
 
 -- Standardize Data Format
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Investigate for Duplicate in dataset
 SELECT Country, Year, CONCAT(Country, Year), COUNT(CONCAT(Country, Year))
 FROM world_life_expectancy
@@ -98,7 +103,7 @@ SET t1.`Life Expectancy` = ROUND((t2.`Life Expectancy` + t3.`Life Expectancy`)/2
 WHERE t1.`Life Expectancy` = '';
 
 -- Exploratory Data Analysis
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Explorer World Life Expectancy by Country
 SELECT Country, MIN(`Life Expectancy`), MAX(`Life Expectancy`),
     ROUND(MAX(`Life Expectancy`) - MIN(`Life Expectancy`),1) AS Life_Increase_15_Years
@@ -148,3 +153,5 @@ ORDER BY BMI DESC;
 SELECT Country, Year, `Life Expectancy`, `Adult Mortality`,
     SUM(`Adult Mortality`) OVER(PARTITION BY Country ORDER BY Year) AS Rolling_Total
 FROM world_life_expectancy;
+
+
