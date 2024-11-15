@@ -37,7 +37,7 @@ logging.critical('This is a CRITICAL message.')
 
 logging.info('Starting the script.')
 # Source MySQL connection details
-source_db_url = 'mysql+pymysql://etluser:eXtract2215$@192.168.1.200:3306/sakila'
+source_db_url = 'mysql+pymysql://etluser:eXtract2215$@192.168.1.101:3306/sakila'
 
 # Target MySQL connection details to target database
 target_db_url = 'mysql+pymysql://etluser:eXtract2215$@192.168.1.200:3306/synthea'
@@ -74,8 +74,8 @@ def upsert(df, table_name, conn):
 try:
     with source_engine.connect() as src_conn, target_engine.connect() as tgt_conn:  # Establish connections to both databases
         # Load data into DataFrames from the source database
-        df_actor = pd.read_sql("SELECT * FROM sakila.actor", con=src_conn)
-        df_customer = pd.read_sql("SELECT * FROM sakila.customer", con=src_conn)
+        df_actor = pd.read_sql("SELECT * FROM actor", con=src_conn)
+        df_customer = pd.read_sql("SELECT * FROM customer", con=src_conn)
         logging.info("Data loaded into DataFrames from the source database.")
 
         # Perform UPSERT operation into each table in the target database
