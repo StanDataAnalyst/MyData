@@ -1,0 +1,121 @@
+# ETL Automation with MySQL: Dynamic Data Integration and Management
+
+## This Python script automates the ETL (Extract, Transform, Load) process by seamlessly integrating data between two MySQL databases. 
+## The script utilizes robust libraries such as sqlalchemy for database operations, pandas for data manipulation, and logging for 
+## comprehensive monitoring of the process. It begins by extracting data from source tables into DataFrames, followed by performing an UPSERT 
+## operation to update or insert records in the target database.
+
+## The UPSERT functionality, powered by SQLAlchemy's dialect-specific capabilities, ensures data consistency and eliminates duplicate records. 
+## Additionally, the script incorporates best practices for memory management by programmatically deleting unused DataFrames and invoking garbage 
+## collection to optimize performance. Detailed logging at every step ensures transparency, facilitates debugging, and provides a clear audit trail
+## of operations. This implementation highlights the efficiency of Python in handling large-scale data workflows in a secure and scalable manner.
+
+import logging      # For log messages
+import os           # To interact with the operating system
+from sqlalchemy import create_engine, Table, MetaData  # For database operations
+import pandas as pd         # For data manipulation
+from sqlalchemy.dialects.mysql import insert        # Import the insert function for creating SQL statements
+import traceback        # Print and format exceptions
+import gc           # To free up memory
+
+# Ensure the log directory exists
+log_dir = 'C:/log/python/etl'
+log_file = os.path.join(log_dir, 'etl_log.log')
+# Create directory if it doesn't exist
+os.makedirs(log_dir, exist_ok=True)
+
+# Configure logging
+logging.basicConfig(filename=log_file, level=logging.DEBUG,  # To capture all levels of log messages
+                    format='%(asctime)s - %(levelname)s - %(message)s') # Include timestamp, log level, and message
+
+# Example log messages
+logging.debug('This is a DEBUG message.')
+logging.info('This is an INFO message.')
+logging.warning('This is a WARNING message.')
+logging.error('This is an ERROR message.')
+logging.critical('This is a CRITICAL message.')
+
+logging.info('Starting the script.')
+# Source MySQL connection details
+source_db_url = 'mysql+pymysql://etluser:eXtract2215$@192.168.1.200:3306/sakila'
+
+# Target MySQL connection details to target database
+target_db_url = 'mysql+pymysql://etluser:eXtract2215$@192.168.1.200:3306/synthea'
+
+# Create engine instances for both source and target databases
+source_engine = create_engine(source_db_url)
+target_engine = create_engine(target_db_url)
+logging.info('Database engines created for both source and target databases.')
+# Function to perform UPSERT
+def upsert(df, table_name, conn):
+    meta = MetaData()       # Create a MetaData instance to hold table schema info
+    table = Table(table_name, meta, autoload_with=conn)     # Load the table schema from a database
+    
+    # Convert DataFrame to list of dictionaries
+    data = df.to_dict(orient='records')
+    
+    # Build the insert statement with on duplicate key update
+    stmt = insert(table).values(data)
+    update_dict = {c.name: c for c in stmt.inserted}    # Prepare a dictionary for updating rows on conflict
+    stmt = stmt.on_duplicate_key_update(update_dict)    # Adds the ON DUPLICATE KEY UPDATE clause
+    
+    # Logs the compiled SQL statement for debugging
+    logging.debug(stmt.compile(dialect=conn.dialect))
+    
+    try:
+        # Execute the statement
+        result = conn.execute(stmt)
+        conn.commit()  # Explicitly commit the transaction
+        logging.info(f"{result.rowcount} rows affected in {table_name}.")   # Logs the number of affected rows
+    except Exception as e:
+        logging.error("Error occurred:", exc_info=True)     # Logs any errors with a traceback
+        conn.rollback()  # Rollback if error occurs
+
+try:
+    with source_engine.connect() as src_conn, target_engine.connect() as tgt_conn:  # Establish connections to both databases
+        # Load data into DataFrames from the source database
+        df_actor = pd.read_sql("SELECT * FROM sakila.actor", con=src_conn)
+        df_customer = pd.read_sql("SELECT * FROM sakila.customer", con=src_conn)
+        logging.info("Data loaded into DataFrames from the source database.")
+
+        # Perform UPSERT operation into each table in the target database
+        upsert(df_actor, 'actor_01', tgt_conn)
+        upsert(df_customer, 'customer_01', tgt_conn)
+
+finally:
+    source_engine.dispose()    # Disposes of the source database engine
+    target_engine.dispose()    # Disposes of the target database engine
+    logging.info("Database connections closed.")
+
+# Function to delete all DataFrames
+def delete_all_dataframes():
+    # Get a list of all variable names in the global namespace
+    all_variables = list(globals().keys())
+
+    # Iterate over all variable names
+    for var_name in all_variables:
+        # Check if the variable is a DataFrame
+        if isinstance(globals()[var_name], pd.DataFrame):       # Check if the variable is a DataFrame
+            del globals()[var_name]     # Delete the DataFrame
+            logging.info(f"Deleted DataFrame: {var_name}")  # Log the deletion of the DataFrame
+
+    # Force garbage collection
+    gc.collect()
+    logging.info("Garbage collection completed.")
+
+# Delete all DataFrames
+delete_all_dataframes()
+
+# Check if DataFrames have been deleted
+try:
+    print(df_actor.head())
+except NameError:
+    logging.info("df_actor has been deleted")
+
+try:
+    print(df_customer.head())
+except NameError:
+    logging.info("df_customer has been deleted")
+
+# End of script
+logging.info("Script completed successfully.")
